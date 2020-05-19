@@ -1,0 +1,83 @@
+import os
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import MultipleLocator
+import numpy as np
+
+
+class Draw:
+    def __init__(self, fold: str, dilate: str, learn_rate: str):
+        self.path = "E:/CLONE/log_full_loss/"
+        self.fold = fold
+        self.dilate = dilate
+        self.learn_rate = learn_rate
+
+    def get_filename(self):
+        files = os.listdir(self.path)
+        files_pre_name_list = []
+        for file in files:
+            file_path = os.path.join(self.path, file)
+            (file_parent_path, file_name_with_extension) = os.path.split(file_path)
+            (file_name, extension) = os.path.splitext(file_name_with_extension)
+            files_pre_name_list.append(file_name)
+        # print(files_pre_name_list)
+        return files_pre_name_list
+
+    def get_need_txt_list(self):
+        seg_list = []
+        dec_list = []
+        files_pre_name_list = self.get_filename()
+
+        #print(files_pre_name_list)
+
+        for each_name in files_pre_name_list:
+            file_name_split = each_name.split('_')
+            if file_name_split[1] == self.fold and file_name_split[3] == self.dilate and file_name_split[4] == 'seg':
+                seg_list.append(each_name)
+            if file_name_split[1] == self.fold and file_name_split[3] == self.dilate and file_name_split[4] == 'dec':
+                dec_list.append(each_name)
+        seg_list.sort(key=lambda x: float(x.split('_')[-1]))
+        dec_list.sort(key=lambda x: float(x.split('_')[-1]))
+        # print(seg_list)
+        # print(dec_list)
+        return seg_list, dec_list
+
+    def get_loss(self):
+        seg_list, dec_list = self.get_need_txt_list()
+
+        def get_loss_list(a_list):
+            a_loss_list = []
+            for item in a_list:
+                if item.split('_')[-1] == self.learn_rate:
+                    txt_path = self.path + item + '.txt'
+                    with open(txt_path, 'r') as kkk:
+                        lines = kkk.readlines()[1:]  # 去除第一行，从第二行开始读取
+                        for line in lines:
+                            this_loss = float(line.split(':')[-1].strip())
+                            a_loss_list.append(this_loss)
+            return a_loss_list
+
+        seg_loss = get_loss_list(seg_list)
+        dec_loss = get_loss_list(dec_list)
+        return seg_loss, dec_loss
+
+    def draw_out(self):
+        fig, ax = plt.subplots(figsize=(6.4, 4.8), dpi=300)
+        epoch = np.arange(0, 50, 1)
+        seg_loss, dec_loss = self.get_loss()
+        rects1 = plt.plot(epoch, seg_loss, color="blue", linewidth=2, linestyle=':', label='segmentation', marker='*')
+        rects2 = plt.plot(epoch, dec_loss, color="black", linewidth=2, linestyle=':', label='decision', marker='*')
+        plt.xlabel('epoch', fontsize=20)
+        plt.ylabel('loss', fontsize=20)
+        plt.title('fold_' + self.fold + '_learn_rate_' + self.learn_rate)
+        plt.yticks(np.arange(0, 55, 5), fontsize=16)
+        ax.xaxis.set_major_locator(MultipleLocator(5))
+        plt.ylim((0, 55))
+        plt.legend(fontsize=12, framealpha=0.8, frameon=True)
+        img_name = 'fold_' + self.fold + '_learn_rate_' + self.learn_rate + '.svg'
+        img = plt.savefig(img_name)
+        # plt.show()
+        return img
+
+
+if __name__ == "__main__":
+    Draw(fold='0', dilate='0', learn_rate='0.01').draw_out()
